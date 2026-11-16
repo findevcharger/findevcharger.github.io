@@ -534,7 +534,11 @@ async function signIn() {
   try { await signInWithPopup(auth, provider); track('login', { method: 'google' }); }
   catch (e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') await signInWithRedirect(auth, provider);
-    else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') { console.error(e); toast('Sign-in failed. Try again.'); }
+    else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      console.error(e);
+      const why = { 'auth/unauthorized-domain': 'Sign-in is not switched on for this web address yet.', 'auth/operation-not-allowed': 'Google sign-in is not enabled for this app yet.', 'auth/network-request-failed': 'No internet connection. Try again.' }[e.code];
+      toast(why || `Sign-in failed (${e.code || 'unknown error'}). Try again.`, 6000);
+    }
   }
 }
 $('btn-account').onclick = () => (state.user ? showView('profile') : signIn());
