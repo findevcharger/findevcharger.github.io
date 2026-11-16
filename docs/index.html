@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b7a4b">
+  <title>EV Charge – Find EV charging stations near you</title>
+  <meta name="description" content="See EV charging stations near you, check availability and book a slot. Free to use.">
+  <meta property="og:title" content="EV Charge – Find EV charging stations near you">
+  <meta property="og:description" content="See EV chargers near you, check availability and book a slot. Free to use. Tell us what you want next.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://findevcharger.github.io/">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="icon.svg" alt="" width="28" height="28"><span>EV Charge</span></div>
+    <div class="top-actions">
+      <button id="btn-feedback" class="btn small">Give feedback</button>
+      <button id="btn-account" class="btn small ghost">Sign in</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-map" class="view active">
+      <div id="map" aria-label="Map of charging stations"></div>
+      <button id="btn-locate" class="fab" title="Go to my location" aria-label="Go to my location">◎</button>
+      <div class="filters" id="filters"></div>
+      <div class="legend">
+        <span><i class="dot available"></i>Available</span>
+        <span><i class="dot busy"></i>Busy</span>
+        <span><i class="dot offline"></i>Offline</span>
+        <span><i class="dot unknown"></i>Status unknown</span>
+      </div>
+      <div id="station-list" class="list"></div>
+      <p class="credit">Station data © Open Charge Map contributors. Map © OpenStreetMap contributors.</p>
+    </section>
+
+    <section id="view-bookings" class="view"><div id="bookings" class="page"></div></section>
+    <section id="view-owner" class="view"><div id="owner" class="page"></div></section>
+    <section id="view-admin" class="view"><div id="admin" class="page"></div></section>
+    <section id="view-profile" class="view"><div id="profile" class="page"></div></section>
+  </main>
+
+  <nav class="tabs">
+    <button data-view="map" class="active">Map</button>
+    <button data-view="bookings">Bookings</button>
+    <button data-view="owner" id="tab-owner" hidden>My stations</button>
+    <button data-view="admin" id="tab-admin" hidden>Admin</button>
+    <button data-view="profile">Profile</button>
+  </nav>
+
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true">
+      <button class="sheet-close" data-close aria-label="Close">✕</button>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

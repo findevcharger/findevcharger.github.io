@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function email() { return request.auth.token.email.lower(); }
+    // Admins are listed here. Keep in sync with ADMIN_EMAILS in docs/firebase-config.js.
+    function isAdmin() { return signedIn() && email() in ['evchargingfinder@gmail.com']; }
+    function partner(stationId) { return get(/databases/$(database)/documents/partners/$(stationId)).data; }
+
+    // A user's own profile.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Partner stations: live charger status, opening hours, price. Public to read.
+    match /partners/{stationId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.ownerEmail == email()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chargers', 'updatedAt']));
+    }
+
+    // One document per charger per 30-minute slot. It can be created but never overwritten,
+    // which is what makes double booking impossible.
+    match /slotLocks/{lockId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && lockId == request.resource.data.stationId + '_' + request.resource.data.chargerId + '_'
+                     + request.resource.data.date + '_' + request.resource.data.time.replace(':', '')
+        && partner(request.resource.data.stationId).bookable == true;
+      allow update: if false;
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin()
+        || partner(resource.data.stationId).ownerEmail == email());
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid
+        || resource.data.ownerEmail == email() || isAdmin());
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.slotIds.size() >= 1 && request.resource.data.slotIds.size() <= 4
+        && request.resource.data.ownerEmail == partner(request.resource.data.stationId).ownerEmail;
+      // Drivers may cancel their own booking; owners and admins may mark completed or no-show.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && ((resource.data.uid == request.auth.uid && request.resource.data.status == 'cancelled')
+            || resource.data.ownerEmail == email() || isAdmin());
+      allow delete: if false;
+    }
+
+    // Feedback and "I want to book this station" requests. Anyone may send one,
+    // signed in or not; only admins can read them.
+    match /feedback/{feedbackId} {
+      allow create: if request.resource.data.keys().hasOnly(['type', 'rating', 'note', 'contact', 'uid', 'stationId', 'stationName', 'createdAt'])
+        && request.resource.data.type in ['feedback', 'want_booking']
+        && request.resource.data.note is string && request.resource.data.note.size() <= 1000
+        && request.resource.data.contact is string && request.resource.data.contact.size() <= 100
+        && request.resource.data.stationName is string && request.resource.data.stationName.size() <= 200
+        && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid));
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Chargers that people say are missing from the map. Anyone may send one;
+    // only admins can read them.
+    match /stationSuggestions/{suggestionId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'lat', 'lng', 'kw', 'wheels', 'uid', 'status', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 80
+        && request.resource.data.lat is number && request.resource.data.lng is number
+        && request.resource.data.wheels is list && request.resource.data.wheels.size() >= 1 && request.resource.data.wheels.size() <= 3
+        && (request.resource.data.kw == null || request.resource.data.kw is number)
+        && request.resource.data.status == 'new'
+        && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid));
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,5 @@
+node_modules/
+.firebase/
+*.log
+data/*_raw.json
+data/ocm_reference.json
